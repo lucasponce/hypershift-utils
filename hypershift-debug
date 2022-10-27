@@ -1,0 +1,139 @@
+#!/bin/bash
+
+# Params
+# $1 environment (int or stage)
+# $2 cluster name to debug
+# $3 base directory to create logs and keys
+
+if [ "$1x" == "x" ]
+then
+    echo "It requires an environment {int or stage}"
+    exit 1
+fi
+ENV=$1
+
+if [ "$2x" == "x" ]
+then
+  echo "It requires a cluster name"
+  exit 2
+fi
+HC_NAME=$2
+
+if [ "$3x" == "x" ]
+then
+  echo "It requires a base directory for storing logs and temporary keys"
+  exit 3
+fi
+BASE_DIR=$3
+LOGS_DIR=$BASE_DIR/hs-${ENV}-${HC_NAME}-logs
+TMP_SSH=$BASE_DIR/hs-${ENV}-${HC_NAME}-ssh
+mkdir -p $LOGS_DIR
+mkdir -p $TMP_SSH
+
+
+# These are helpers files where we have
+# <API url> <user> <password>
+SC_CREDENTIALS="hs-sc-${ENV}-credentials"
+MC_CREDENTIALS="hs-mc-${ENV}-credentials"
+
+SC_API_URL=$(cat ~/$SC_CREDENTIALS | awk '{ print $1 }')
+SC_USER=$(cat ~/$SC_CREDENTIALS | awk '{ print $2 }')
+SC_PASSWORD=$(cat ~/$SC_CREDENTIALS | awk '{ print $3 }')
+
+MC_API_URL=$(cat ~/$MC_CREDENTIALS | awk '{ print $1}')
+MC_USER=$(cat ~/$MC_CREDENTIALS | awk '{ print $2 }')
+MC_PASSWORD=$(cat ~/$MC_CREDENTIALS | awk '{ print $3 }')
+
+# Login the Service Cluster (ACM Hub)
+echo "=== [$ENV] Service Cluster $SC_API_URL"
+oc login $SC_API_URL -u $SC_USER -p $SC_PASSWORD
+
+# Get the manifestwork for a given cluster
+# Get the Namespace of the Management Cluster where the namespace will be set
+HC_NAMESPACE=$(oc get manifestwork -A -l api.openshift.com/name=$HC_NAME -o json | jq -r '.items[0].spec.workload.manifests[0].metadata.name')
+echo "Hypershift Namespace : $HC_NAMESPACE"
+echo "Hypershift Cluster   : $HC_NAME"
+echo ""
+
+# Login the Management Cluster
+echo "=== [$ENV] Management Cluster $MC_API_URL"
+oc login $MC_API_URL -u $MC_USER -p $MC_PASSWORD
+echo ""
+
+# Start to debug the Hypershift resources
+CONTROL_PLANE_NAMESPACE="${HC_NAMESPACE}-${HC_NAME}"
+echo "machines.cluster.x-k8s.io"
+oc get machines.cluster.x-k8s.io -n $CONTROL_PLANE_NAMESPACE
+echo ""
+
+echo "awsmachines"
+oc get awsmachines -n $CONTROL_PLANE_NAMESPACE
+echo ""
+
+echo "machinedeployment"
+oc get machinedeployment -n $CONTROL_PLANE_NAMESPACE
+echo ""
+
+echo "machineset"
+oc get machineset -n $CONTROL_PLANE_NAMESPACE
+echo ""
+
+echo "hypershift operator logs"
+oc logs deployment/operator -n hypershift > $LOGS_DIR/hypershift-operator-logs.log
+echo ""
+
+echo "capi-provider logs"
+oc logs deployment/capi-provider -c manager -n $CONTROL_PLANE_NAMESPACE > $LOGS_DIR/capi-provider-logs.log
+echo ""
+
+echo "events"
+oc get events -n $CONTROL_PLANE_NAMESPACE > $LOGS_DIR/events.log
+echo ""
+
+echo "console-logs"
+export AWS_REGION="us-west-2"
+hypershift console-logs aws --namespace $HC_NAMESPACE --name $HC_NAME --aws-creds ~/.aws/credentials --output-dir $LOGS_DIR
+echo ""
+
+echo "secrets and id_rsa keys"
+oc get secret -n $HC_NAMESPACE ${HC_NAME}-ssh -o jsonpath='{ .data.id_rsa }' | base64 -d > $TMP_SSH/id_rsa
+oc get secret -n $HC_NAMESPACE ${HC_NAME}-ssh -o jsonpath='{ .data.id_rsa\.pub }' | base64 -d > $TMP_SSH/id_rsa.pub
+echo ""
+
+#echo "bastion machine"
+#hypershift create bastion aws --namespace $HC_NAMESPACE --name $HC_NAME --aws-creds ~/.aws/credentials --ssh-key-file $TMP_SSH/id_rsa.pub
+#echo ""
+#
+# *** Cannot create bastion because VPC are not properly tagged ***
+# It needs manual tagging of:
+#
+#func existingVPC(ctx context.Context, ec2Client *ec2.EC2, infraID string) (string, error) {
+#	var vpcID string
+#	vpcCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+#	defer cancel()
+#	vpcFilter := []*ec2.Filter{
+#		{
+#			Name:   aws.String(fmt.Sprintf("tag:kubernetes.io/cluster/%s", infraID)),
+#			Values: []*string{aws.String("owned")},
+#		},
+#		{
+#			Name:   aws.String("tag:Name"),
+#			Values: []*string{aws.String(vpcName(infraID))},
+#		},
+#	}
+#	result, err := ec2Client.DescribeVpcsWithContext(vpcCtx, &ec2.DescribeVpcsInput{Filters: vpcFilter})
+#	if err != nil {
+#		return "", fmt.Errorf("cannot list vpcs: %w", err)
+#	}
+#	for _, vpc := range result.Vpcs {
+#		vpcID = aws.StringValue(vpc.VpcId)
+#		break
+#	}
+#	return vpcID, nil
+#}
+
+#echo "extract journals"
+#HS_HOME=$GOPATH/src/github.com/openshift/hypershift
+#export INFRAID=$(oc get hc -n $HC_NAMESPACE $HC_NAME -o jsonpath='{ .spec.infraID }')
+#export SSH_PRIVATE_KEY=$TMP_SSH/id_rsa
+#$HS_HOME/test/e2e/util/dump/copy-machine-journals.sh $LOGS_DIR
