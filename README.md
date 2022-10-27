@@ -10,7 +10,7 @@ Debug tooling for hypershift environment
 
 # Preparation
 
-Define a hc-sc-<env>-credentials file with the URL of the ServiceCluster, user and password under your $HOME.
+Define a hc-sc-$ENVIRONMENT-credentials file with the URL of the ServiceCluster, user and password under your $HOME.
 
 Example:
 
