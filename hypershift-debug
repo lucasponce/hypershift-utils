@@ -26,23 +26,18 @@ then
 fi
 BASE_DIR=$3
 LOGS_DIR=$BASE_DIR/hs-${ENV}-${HC_NAME}-logs
-TMP_SSH=$BASE_DIR/hs-${ENV}-${HC_NAME}-ssh
+# TODO Finish the SSH handling
+# TMP_SSH=$BASE_DIR/hs-${ENV}-${HC_NAME}-ssh
 mkdir -p $LOGS_DIR
-mkdir -p $TMP_SSH
-
+# mkdir -p $TMP_SSH
 
 # These are helpers files where we have
 # <API url> <user> <password>
 SC_CREDENTIALS="hs-sc-${ENV}-credentials"
-MC_CREDENTIALS="hs-mc-${ENV}-credentials"
 
 SC_API_URL=$(cat ~/$SC_CREDENTIALS | awk '{ print $1 }')
 SC_USER=$(cat ~/$SC_CREDENTIALS | awk '{ print $2 }')
 SC_PASSWORD=$(cat ~/$SC_CREDENTIALS | awk '{ print $3 }')
-
-MC_API_URL=$(cat ~/$MC_CREDENTIALS | awk '{ print $1}')
-MC_USER=$(cat ~/$MC_CREDENTIALS | awk '{ print $2 }')
-MC_PASSWORD=$(cat ~/$MC_CREDENTIALS | awk '{ print $3 }')
 
 # Login the Service Cluster (ACM Hub)
 echo "=== [$ENV] Service Cluster $SC_API_URL"
@@ -50,14 +45,21 @@ oc login $SC_API_URL -u $SC_USER -p $SC_PASSWORD
 
 # Get the manifestwork for a given cluster
 # Get the Namespace of the Management Cluster where the namespace will be set
-HC_NAMESPACE=$(oc get manifestwork -A -l api.openshift.com/name=$HC_NAME -o json | jq -r '.items[0].spec.workload.manifests[0].metadata.name')
-echo "Hypershift Namespace : $HC_NAMESPACE"
-echo "Hypershift Cluster   : $HC_NAME"
+MANIFEST_WORK=$(oc get manifestwork -A -l api.openshift.com/name=$HC_NAME -o json)
+HC_NAMESPACE=$(echo "$MANIFEST_WORK" | jq -r '.items[0].spec.workload.manifests[0].metadata.name')
+
+# The ManagementCluster name is used as namespace name by convention
+MC_NAME=$(echo "$MANIFEST_WORK" | jq -r '.items[0].metadata.namespace')
+MC_API_URL=$(ocm get /api/clusters_mgmt/v1/clusters -p search="name like '${MC_NAME}'" | jq -r '.items[0].api.url')
+
+echo "Hypershift Namespace   : $HC_NAMESPACE"
+echo "Hypershift Cluster     : $HC_NAME"
 echo ""
 
 # Login the Management Cluster
+# Assuming that the credentials for the Service Cluster will be valid for a Management Cluster
 echo "=== [$ENV] Management Cluster $MC_API_URL"
-oc login $MC_API_URL -u $MC_USER -p $MC_PASSWORD
+oc login $MC_API_URL -u $SC_USER -p $SC_PASSWORD
 echo ""
 
 # Start to debug the Hypershift resources
@@ -95,10 +97,12 @@ export AWS_REGION="us-west-2"
 hypershift console-logs aws --namespace $HC_NAMESPACE --name $HC_NAME --aws-creds ~/.aws/credentials --output-dir $LOGS_DIR
 echo ""
 
-echo "secrets and id_rsa keys"
-oc get secret -n $HC_NAMESPACE ${HC_NAME}-ssh -o jsonpath='{ .data.id_rsa }' | base64 -d > $TMP_SSH/id_rsa
-oc get secret -n $HC_NAMESPACE ${HC_NAME}-ssh -o jsonpath='{ .data.id_rsa\.pub }' | base64 -d > $TMP_SSH/id_rsa.pub
-echo ""
+# TODO Get secrets and keys from ManifestWork for connecting to the Node
+
+# echo "secrets and id_rsa keys"
+# oc get secret -n $HC_NAMESPACE ${HC_NAME}-ssh -o jsonpath='{ .data.id_rsa }' | base64 -d > $TMP_SSH/id_rsa
+# oc get secret -n $HC_NAMESPACE ${HC_NAME}-ssh -o jsonpath='{ .data.id_rsa\.pub }' | base64 -d > $TMP_SSH/id_rsa.pub
+# echo ""
 
 #echo "bastion machine"
 #hypershift create bastion aws --namespace $HC_NAMESPACE --name $HC_NAME --aws-creds ~/.aws/credentials --ssh-key-file $TMP_SSH/id_rsa.pub
