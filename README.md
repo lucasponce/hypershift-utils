@@ -7,6 +7,7 @@ Debug tooling for hypershift environment
 - `ocm` CLI
 - `hypershift` CLI
 - `aws` CLI
+- `jq`
 
 # Preparation
 
