@@ -5,6 +5,17 @@
 # $2 cluster name to debug
 # $3 base directory to create logs and keys
 
+exec_to_check="hypershift oc jq ocm aws"
+
+echo "=== Checking local prerequisites"
+for exec in $exec_to_check; do
+    if ! command -v "$exec" &> /dev/null
+    then
+        printf "**WARNING** $exec not found in PATH, please install it\n"
+        exit 1
+    fi
+done
+
 if [ "$1x" == "x" ]
 then
     echo "It requires an environment {int or stage}"
@@ -33,11 +44,18 @@ mkdir -p $LOGS_DIR
 
 # These are helpers files where we have
 # <API url> <user> <password>
-SC_CREDENTIALS="hs-sc-${ENV}-credentials"
+SC_CREDENTIALS_NAME="hs-sc-${ENV}-credentials"
+SC_CREDENTIALS="$HOME/$SC_CREDENTIALS_NAME"
 
-SC_API_URL=$(cat ~/$SC_CREDENTIALS | awk '{ print $1 }')
-SC_USER=$(cat ~/$SC_CREDENTIALS | awk '{ print $2 }')
-SC_PASSWORD=$(cat ~/$SC_CREDENTIALS | awk '{ print $3 }')
+# check that credentials file is there
+if [ ! -f "$SC_CREDENTIALS" ]; then
+    echo "**ERROR**: $SC_CREDENTIALS not found!"
+    exit 3
+fi
+
+SC_API_URL=$(cat $SC_CREDENTIALS | awk '{ print $1 }')
+SC_USER=$(cat $SC_CREDENTIALS | awk '{ print $2 }')
+SC_PASSWORD=$(cat $SC_CREDENTIALS | awk '{ print $3 }')
 
 # Login the Service Cluster (ACM Hub)
 echo "=== [$ENV] Service Cluster $SC_API_URL"
