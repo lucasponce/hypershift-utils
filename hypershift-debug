@@ -83,6 +83,13 @@ echo ""
 
 # Start to debug the Hypershift resources
 CONTROL_PLANE_NAMESPACE="${HC_NAMESPACE}-${HC_NAME}"
+echo "hostedcluster"
+oc get hostedcluster -n $HC_NAMESPACE $HC_NAME
+
+echo "nodepools"
+oc get nodepools -n $HC_NAMESPACE 
+echo ""
+
 echo "machines.cluster.x-k8s.io"
 oc get machines.cluster.x-k8s.io -n $CONTROL_PLANE_NAMESPACE
 echo ""
