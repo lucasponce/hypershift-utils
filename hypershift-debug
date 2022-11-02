@@ -63,13 +63,14 @@ oc login $SC_API_URL -u $SC_USER -p $SC_PASSWORD
 
 # Get the manifestwork for a given cluster
 # Get the Namespace of the Management Cluster where the namespace will be set
-MANIFEST_WORK=$(oc get manifestwork -A -l api.openshift.com/name=$HC_NAME -o json)
+MANIFEST_WORK=$(oc get manifestwork -A -l api.openshift.com/name=$HC_NAME,api.openshift.com/management-cluster -o json)
 HC_NAMESPACE=$(echo "$MANIFEST_WORK" | jq -r '.items[0].spec.workload.manifests[0].metadata.name')
 
 # The ManagementCluster name is used as namespace name by convention
 MC_NAME=$(echo "$MANIFEST_WORK" | jq -r '.items[0].metadata.namespace')
 MC_API_URL=$(ocm get /api/clusters_mgmt/v1/clusters -p search="name like '${MC_NAME}'" | jq -r '.items[0].api.url')
 
+echo "Management Cluster     : $MC_NAME"
 echo "Hypershift Namespace   : $HC_NAMESPACE"
 echo "Hypershift Cluster     : $HC_NAME"
 echo ""
