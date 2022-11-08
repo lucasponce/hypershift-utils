@@ -75,6 +75,17 @@ echo "Hypershift Namespace   : $HC_NAMESPACE"
 echo "Hypershift Cluster     : $HC_NAME"
 echo ""
 
+# Workaround when MC can be queried from the OCM api
+# This can be a valid scenario on local environments
+if [ "$MC_API_URL" == "null" ]
+then
+  echo "=== MC API URL null, trying a hs-mc-${ENV}-credentials file"
+  # Integration MC, used when it can't be provided from the API
+  MC_CREDENTIALS_NAME="hs-mc-${ENV}-credentials"
+  MC_CREDENTIALS="$HOME/$MC_CREDENTIALS_NAME"
+  MC_API_URL=$(cat $MC_CREDENTIALS | awk '{ print $1 }')
+fi
+
 # Login the Management Cluster
 # Assuming that the credentials for the Service Cluster will be valid for a Management Cluster
 echo "=== [$ENV] Management Cluster $MC_API_URL"
