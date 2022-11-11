@@ -65,6 +65,8 @@ oc login $SC_API_URL -u $SC_USER -p $SC_PASSWORD
 # Get the Namespace of the Management Cluster where the namespace will be set
 MANIFEST_WORK=$(oc get manifestwork -A -l api.openshift.com/name=$HC_NAME,api.openshift.com/management-cluster -o json)
 HC_NAMESPACE=$(echo "$MANIFEST_WORK" | jq -r '.items[0].spec.workload.manifests[0].metadata.name')
+oc get manifestwork -A -l api.openshift.com/name=$HC_NAME,api.openshift.com/management-cluster -o yaml > $LOGS_DIR/$HC_NAME-manifestwork.yaml
+
 
 # The ManagementCluster name is used as namespace name by convention
 MC_NAME=$(echo "$MANIFEST_WORK" | jq -r '.items[0].metadata.namespace')
@@ -85,6 +87,8 @@ echo ""
 CONTROL_PLANE_NAMESPACE="${HC_NAMESPACE}-${HC_NAME}"
 echo "hostedcluster"
 oc get hostedcluster -n $HC_NAMESPACE $HC_NAME
+oc get hostedcluster -n $HC_NAMESPACE $HC_NAME -o yaml > $LOGS_DIR/$HC_NAME-hostedcluster.yaml
+echo ""
 
 echo "nodepools"
 oc get nodepools -n $HC_NAMESPACE 
@@ -108,14 +112,17 @@ echo ""
 
 echo "hypershift operator logs"
 oc logs deployment/operator -n hypershift > $LOGS_DIR/hypershift-operator-logs.log
+cat $LOGS_DIR/hypershift-operator-logs.log | grep "$HC_NAME" > $LOGS_DIR/$HC_NAME-hypershift-operator-logs.log
 echo ""
 
 echo "capi-provider logs"
 oc logs deployment/capi-provider -c manager -n $CONTROL_PLANE_NAMESPACE > $LOGS_DIR/capi-provider-logs.log
+cat $LOGS_DIR/capi-provider-logs.log | grep "$HC_NAME" > $LOGS_DIR/$HC_NAME-capi-provider-logs.log
 echo ""
 
 echo "events"
 oc get events -n $CONTROL_PLANE_NAMESPACE > $LOGS_DIR/events.log
+cat $LOGS_DIR/events.log | grep "$HC_NAME" > $LOGS_DIR/$HC_NAME-events.log
 echo ""
 
 echo "console-logs"
