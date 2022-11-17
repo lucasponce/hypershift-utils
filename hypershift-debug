@@ -85,47 +85,53 @@ echo ""
 
 # Start to debug the Hypershift resources
 CONTROL_PLANE_NAMESPACE="${HC_NAMESPACE}-${HC_NAME}"
-echo "hostedcluster"
+echo "=== hostedcluster"
 oc get hostedcluster -n $HC_NAMESPACE $HC_NAME
 oc get hostedcluster -n $HC_NAMESPACE $HC_NAME -o yaml > $LOGS_DIR/$HC_NAME-hostedcluster.yaml
 echo ""
 
-echo "nodepools"
-oc get nodepools -n $HC_NAMESPACE 
+echo "=== nodepools"
+oc get nodepools -n $HC_NAMESPACE
+oc get nodepools -n $HC_NAMESPACE "$HC_NAME-workers" -o yaml > $LOGS_DIR/$HC_NAME-nodepool-default.yaml
 echo ""
 
-echo "machines.cluster.x-k8s.io"
+echo "=== machines.cluster.x-k8s.io"
 oc get machines.cluster.x-k8s.io -n $CONTROL_PLANE_NAMESPACE
 echo ""
 
-echo "awsmachines"
+echo "=== awsmachines"
 oc get awsmachines -n $CONTROL_PLANE_NAMESPACE
 echo ""
 
-echo "machinedeployment"
+echo "=== machinedeployment"
 oc get machinedeployment -n $CONTROL_PLANE_NAMESPACE
 echo ""
 
-echo "machineset"
+echo "=== machineset"
 oc get machineset -n $CONTROL_PLANE_NAMESPACE
 echo ""
 
-echo "hypershift operator logs"
+echo "=== hypershift operator logs"
 oc logs deployment/operator -n hypershift > $LOGS_DIR/hypershift-operator-logs.log
 cat $LOGS_DIR/hypershift-operator-logs.log | grep "$HC_NAME" > $LOGS_DIR/$HC_NAME-hypershift-operator-logs.log
 echo ""
 
-echo "capi-provider logs"
+echo "=== capi-provider logs"
 oc logs deployment/capi-provider -c manager -n $CONTROL_PLANE_NAMESPACE > $LOGS_DIR/capi-provider-logs.log
 cat $LOGS_DIR/capi-provider-logs.log | grep "$HC_NAME" > $LOGS_DIR/$HC_NAME-capi-provider-logs.log
 echo ""
 
-echo "events"
+echo "=== control-plane-operator"
+oc logs deployment/control-plane-operator -c control-plane-operator -n $CONTROL_PLANE_NAMESPACE > $LOGS_DIR/control-plane-operator-logs.log
+cat $LOGS_DIR/control-plane-operator-logs.log | grep "$HC_NAME" > $LOGS_DIR/$HC_NAME-control-plane-operator-logs.log
+echo ""
+
+echo "=== events"
 oc get events -n $CONTROL_PLANE_NAMESPACE > $LOGS_DIR/events.log
 cat $LOGS_DIR/events.log | grep "$HC_NAME" > $LOGS_DIR/$HC_NAME-events.log
 echo ""
 
-echo "console-logs"
+echo "=== console-logs"
 export AWS_REGION="us-west-2"
 hypershift console-logs aws --namespace $HC_NAMESPACE --name $HC_NAME --aws-creds ~/.aws/credentials --output-dir $LOGS_DIR
 echo ""
