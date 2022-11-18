@@ -67,6 +67,7 @@ MANIFEST_WORK=$(oc get manifestwork -A -l api.openshift.com/name=$HC_NAME,api.op
 HC_NAMESPACE=$(echo "$MANIFEST_WORK" | jq -r '.items[0].spec.workload.manifests[0].metadata.name')
 oc get manifestwork -A -l api.openshift.com/name=$HC_NAME,api.openshift.com/management-cluster -o yaml > $LOGS_DIR/$HC_NAME-manifestwork.yaml
 
+sc_ocp_version=$(oc get clusterversion version -o jsonpath="{ .status.history[?(@.state==\"Completed\")].version }")
 
 # The ManagementCluster name is used as namespace name by convention
 MC_NAME=$(echo "$MANIFEST_WORK" | jq -r '.items[0].metadata.namespace')
@@ -81,6 +82,19 @@ echo ""
 # Assuming that the credentials for the Service Cluster will be valid for a Management Cluster
 echo "=== [$ENV] Management Cluster $MC_API_URL"
 oc login $MC_API_URL -u $SC_USER -p $SC_PASSWORD
+echo ""
+
+mc_ocp_version=$(oc get clusterversion version -o jsonpath="{ .status.history[?(@.state==\"Completed\")].version }")
+hypershift_operator_image=$(oc get deployment -n hypershift operator -o jsonpath="{ .spec.template.spec.containers[0].image }")
+hc_target_version=$(oc get hostedcluster -n $HC_NAMESPACE $HC_NAME -o jsonpath="{ .status.version.history[?(@.state==\"Completed\")].version }")
+
+# get current versions
+echo "=== Versions"
+echo "Service Cluster OCP version        : $sc_ocp_version"
+echo "Management Cluster OCP version     : $mc_ocp_version"
+echo "ACM version                        : TODO"  # ideally from OCM addons, can we get it from inside the cluster?
+echo "HyperShift operator image          : $hypershift_operator_image"
+echo "HostedCluster target version       : $hc_target_version"
 echo ""
 
 # Start to debug the Hypershift resources
