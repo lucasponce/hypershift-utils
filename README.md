@@ -13,6 +13,10 @@ Debug tooling for hypershift environment
 
 Define a hc-sc-$ENVIRONMENT-credentials file with the URL of the ServiceCluster, user and password under your $HOME.
 
+Supported $ENVIRONMENTS are `stage`, `int` or `local` for development purposes.
+
+Please, ask the OCM team to get a password for Service Cluster / Managed Cluster debugging.  
+
 Example:
 
 ```
@@ -33,49 +37,68 @@ $ hypershift-debug stage logs-demo /tmp
 Expected output:
 
 ```
-=== [stage] Service Cluster https://api.hs-sc-ccb0thlad.bgnu.s1.devshift.org:6443
+=== Checking local prerequisites
+=== [local] Service Cluster https://api.hs-sc-cbmcd0f3e.jlf6.i1.devshift.org:6443
 Login successful.
 
-You have access to 149 projects, the list has been suppressed. You can list all projects with 'oc projects'
+You have access to 123 projects, the list has been suppressed. You can list all projects with 'oc projects'
 
 Using project "default".
-Hypershift Namespace   : ocm-staging-1vk560949mtdg7ls93fjc6pd8k7an736
-Hypershift Cluster     : logs-demo
+Management Cluster     : hs-mc-cdducjuis
+Hypershift Namespace   : ocm-lponce-205cfu7g1t8kh30q0vn57dolcn0betkc
+Hypershift Cluster     : lponce-local-03
 
-=== [stage] Management Cluster https://api.hs-mc-cd8ni7ios.u1fc.s1.devshift.org:6443
+=== [local] Management Cluster https://api.hs-mc-cdducjuis.lq7x.i1.devshift.org:6443
 Login successful.
 
-You have access to 122 projects, the list has been suppressed. You can list all projects with 'oc projects'
+You have access to 113 projects, the list has been suppressed. You can list all projects with 'oc projects'
 
 Using project "default".
 
-machines.cluster.x-k8s.io
-NAME                                 CLUSTER                            NODENAME   PROVIDERID                              PHASE         AGE   VERSION
-logs-demo-workers-6d66c7b887-jq7wc   1vk560949mtdg7ls93fjc6pd8k7an736              aws:///us-west-2a/i-0570b6cc16f20ebbb   Provisioned   14m   4.12.0-0.nightly-2022-10-27-135134
-logs-demo-workers-6d66c7b887-zqdpz   1vk560949mtdg7ls93fjc6pd8k7an736              aws:///us-west-2a/i-0f22c6267f207c18f   Provisioned   12m   4.12.0-0.nightly-2022-10-27-135134
+=== Versions
+Service Cluster OCP version        : 4.10.24
+Management Cluster OCP version     : 4.11.9
+ACM version                        : TODO
+HyperShift operator image          : quay.io:443/acm-d/hypershift-rhel8-operator@sha256:834ec01781d767aafdd7e07f4e001fb6ef8141712a2f3a7480f5a224e781d71d
+HostedCluster target version       : 4.12.0-rc.0
 
-awsmachines
-NAME                      CLUSTER                            STATE     READY   INSTANCEID                              MACHINE
-logs-demo-workers-6qggz   1vk560949mtdg7ls93fjc6pd8k7an736   running   true    aws:///us-west-2a/i-0f22c6267f207c18f   logs-demo-workers-6d66c7b887-zqdpz
-logs-demo-workers-fjkmd   1vk560949mtdg7ls93fjc6pd8k7an736   running   true    aws:///us-west-2a/i-0570b6cc16f20ebbb   logs-demo-workers-6d66c7b887-jq7wc
+=== hostedcluster
+NAME              VERSION       KUBECONFIG                         PROGRESS    AVAILABLE   PROGRESSING   MESSAGE
+lponce-local-03   4.12.0-rc.0   lponce-local-03-admin-kubeconfig   Completed   True        False         The hosted control plane is available
 
-machinedeployment
-NAME                CLUSTER                            REPLICAS   READY   UPDATED   UNAVAILABLE   PHASE       AGE   VERSION
-logs-demo-workers   1vk560949mtdg7ls93fjc6pd8k7an736   2                  2         2             ScalingUp   62m   4.12.0-0.nightly-2022-10-27-135134
+=== nodepools
+NAME                      CLUSTER           DESIRED NODES   CURRENT NODES   AUTOSCALING   AUTOREPAIR   VERSION       UPDATINGVERSION   UPDATINGCONFIG   MESSAGE
+lponce-local-03-workers   lponce-local-03   2               2               False         True         4.12.0-rc.0                                      
 
-machineset
-NAME                           CLUSTER                            REPLICAS   READY   AVAILABLE   AGE   VERSION
-logs-demo-workers-6d66c7b887   1vk560949mtdg7ls93fjc6pd8k7an736   2                              62m   4.12.0-0.nightly-2022-10-27-135134
+=== machines.cluster.x-k8s.io
+NAME                                       CLUSTER                            NODENAME                                     PROVIDERID                              PHASE     AGE   VERSION
+lponce-local-03-workers-58f476db9c-9llx5   205cfu7g1t8kh30q0vn57dolcn0betkc   ip-10-1-139-177.us-west-2.compute.internal   aws:///us-west-2a/i-033a17619c063dbd7   Running   13h   4.12.0-rc.0
+lponce-local-03-workers-58f476db9c-xlq4c   205cfu7g1t8kh30q0vn57dolcn0betkc   ip-10-1-138-252.us-west-2.compute.internal   aws:///us-west-2a/i-0349f3f7f4717474c   Running   13h   4.12.0-rc.0
 
-hypershift operator logs
+=== awsmachines
+NAME                            CLUSTER                            STATE     READY   INSTANCEID                              MACHINE
+lponce-local-03-workers-mnhrk   205cfu7g1t8kh30q0vn57dolcn0betkc   running   true    aws:///us-west-2a/i-0349f3f7f4717474c   lponce-local-03-workers-58f476db9c-xlq4c
+lponce-local-03-workers-rhb26   205cfu7g1t8kh30q0vn57dolcn0betkc   running   true    aws:///us-west-2a/i-033a17619c063dbd7   lponce-local-03-workers-58f476db9c-9llx5
 
-capi-provider logs
-Found 3 pods, using pod/capi-provider-659dbcb9dd-84plf
+=== machinedeployment
+NAME                      CLUSTER                            REPLICAS   READY   UPDATED   UNAVAILABLE   PHASE     AGE   VERSION
+lponce-local-03-workers   205cfu7g1t8kh30q0vn57dolcn0betkc   2          2       2         0             Running   13h   4.12.0-rc.0
 
-events
+=== machineset
+NAME                                 CLUSTER                            REPLICAS   READY   AVAILABLE   AGE   VERSION
+lponce-local-03-workers-58f476db9c   205cfu7g1t8kh30q0vn57dolcn0betkc   2          2       2           13h   4.12.0-rc.0
 
-console-logs
-2022-10-27T19:09:42+02:00	INFO	Successfully retrieved console logs
+=== hypershift operator logs
+
+=== capi-provider logs
+
+=== control-plane-operator
+
+=== events
+
+=== console-logs
+2022-11-23T09:34:39+01:00	INFO	Successfully retrieved console logs
+
 ```
 
 Logs stored in:

@@ -47,6 +47,9 @@ mkdir -p $LOGS_DIR
 SC_CREDENTIALS_NAME="hs-sc-${ENV}-credentials"
 SC_CREDENTIALS="$HOME/$SC_CREDENTIALS_NAME"
 
+MC_CREDENTIALS_NAME="hs-mc-${ENV}-credentials"
+MC_CREDENTIALS="$HOME/$MC_CREDENTIALS_NAME"
+
 # check that credentials file is there
 if [ ! -f "$SC_CREDENTIALS" ]; then
     echo "**ERROR**: $SC_CREDENTIALS not found!"
@@ -56,6 +59,11 @@ fi
 SC_API_URL=$(cat $SC_CREDENTIALS | awk '{ print $1 }')
 SC_USER=$(cat $SC_CREDENTIALS | awk '{ print $2 }')
 SC_PASSWORD=$(cat $SC_CREDENTIALS | awk '{ print $3 }')
+
+# The hs-mc-<ENV>-credentials file is optional for local environments
+MC_API_URL=$(cat $MC_CREDENTIALS | awk '{ print $1 }')
+MC_USER=$(cat $MC_CREDENTIALS | awk '{ print $2 }')
+MC_PASSWORD=$(cat $MC_CREDENTIALS | awk '{ print $3 }')
 
 # Login the Service Cluster (ACM Hub)
 echo "=== [$ENV] Service Cluster $SC_API_URL"
@@ -70,8 +78,22 @@ oc get manifestwork -A -l api.openshift.com/name=$HC_NAME,api.openshift.com/mana
 sc_ocp_version=$(oc get clusterversion version -o jsonpath="{ .status.history[?(@.state==\"Completed\")].version }")
 
 # The ManagementCluster name is used as namespace name by convention
+MW_NAME=$(echo "$MANIFEST_WORK" | jq -r '.items[0].metadata.name')
 MC_NAME=$(echo "$MANIFEST_WORK" | jq -r '.items[0].metadata.namespace')
-MC_API_URL=$(ocm get /api/clusters_mgmt/v1/clusters -p search="name like '${MC_NAME}'" | jq -r '.items[0].api.url')
+
+# The ManagedCluster stores the hosted cluster API url
+MANAGED_CLUSTER=$(oc get managedcluster/$MW_NAME -A -o json)
+oc get managedcluster/$MW_NAME -A -o yaml > $LOGS_DIR/$HC_NAME-managedcluster.yaml
+
+# Non local environments
+# URL queried via OCM
+# Assuming the same user+password from Service Cluster
+if [ "$ENV" != "local" ]
+then
+  MC_API_URL=$(ocm get /api/clusters_mgmt/v1/clusters -p search="name like '${MC_NAME}'" | jq -r '.items[0].api.url')
+  MC_USER=$SC_USER
+  MC_PASSWORD=$MC_PASSWORD
+fi
 
 echo "Management Cluster     : $MC_NAME"
 echo "Hypershift Namespace   : $HC_NAMESPACE"
@@ -81,7 +103,7 @@ echo ""
 # Login the Management Cluster
 # Assuming that the credentials for the Service Cluster will be valid for a Management Cluster
 echo "=== [$ENV] Management Cluster $MC_API_URL"
-oc login $MC_API_URL -u $SC_USER -p $SC_PASSWORD
+oc login $MC_API_URL -u $MC_USER -p $MC_PASSWORD
 echo ""
 
 mc_ocp_version=$(oc get clusterversion version -o jsonpath="{ .status.history[?(@.state==\"Completed\")].version }")
